@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.utils.data import DataLoader, TensorDataset
 
 class TransformerBlock(nn.Module):
     def __init__(self, embed_size, heads, dropout, forward_expansion):
@@ -24,7 +25,7 @@ class TransformerBlock(nn.Module):
         return out
 
 class TabularTransformer(nn.Module):
-    def __init__(self, input_dim, output_dim, embed_size, num_heads, forward_expansion, dropout):
+    def __init__(self, input_dim, output_dim, embed_size, num_heads, forward_expansion, dropout, batch_size, num_epochs, learning_rate):
         super(TabularTransformer, self).__init__()
         self.embedding = nn.Linear(input_dim, embed_size)
         self.transformer_block = TransformerBlock(
@@ -35,6 +36,11 @@ class TabularTransformer(nn.Module):
         )
         self.fc = nn.Linear(embed_size, output_dim)
 
+        # Training parameters
+        self.batch_size = batch_size
+        self.num_epochs = num_epochs
+        self.learning_rate = learning_rate
+
     def forward(self, x):
         # Add sequence dimension
         x = x.unsqueeze(1)
@@ -43,3 +49,55 @@ class TabularTransformer(nn.Module):
         x = x.squeeze(1)
         out = self.fc(x)
         return out
+    
+    def fit(self, X_train, y_train):
+        # Prepare dataset and dataloader
+        dataset = TensorDataset(X_train, y_train)
+        train_loader = DataLoader(dataset, batch_size=self.batch_size, shuffle=True)
+        
+        # Define loss function and optimizer
+        criterion = nn.CrossEntropyLoss()
+        optimizer = torch.optim.Adam(self.parameters(), lr=self.learning_rate)
+
+        # Training loop
+        for epoch in range(self.num_epochs):
+            running_loss = 0.0
+            for i, (inputs, labels) in enumerate(train_loader):
+                # Zero the parameter gradients
+                optimizer.zero_grad()
+
+                # Forward pass
+                outputs = self(inputs)
+                loss = criterion(outputs, labels)
+
+                # Backward pass and optimize
+                loss.backward()
+                optimizer.step()
+
+                running_loss += loss.item()
+
+            print(f'Epoch [{epoch+1}/{self.num_epochs}], Loss: {running_loss/len(train_loader):.4f}')
+
+        print("Training process has finished")
+    
+    def predict(self, X_test):
+        # Prepare dataloader
+        test_loader = DataLoader(TensorDataset(X_test), batch_size=self.batch_size, shuffle=False)
+        
+        # Set the model to evaluation mode
+        self.eval()
+        
+        y_pred = []
+
+        with torch.no_grad():  # No need to track gradients during evaluation
+            for inputs in test_loader:
+                inputs = inputs[0]  # Extract the input from the tuple
+                outputs = self(inputs)  # Outputs are raw logits
+                
+                # Get predicted class by finding the max logit (since we are not using sigmoid)
+                _, predicted = torch.max(outputs, 1)
+                
+                # Store predicted labels
+                y_pred.extend(predicted.cpu().numpy())
+
+        return y_pred
