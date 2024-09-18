@@ -77,9 +77,9 @@ class IntersampleAttention(nn.Module):
 
         return output
 
-class SAINT(nn.Module):
-    def __init__(self, input_dim, output_dim, attn_dim, num_heads, num_layers, hidden_dim, dropout=0.1):
-        super(SAINT, self).__init__()
+class SAINTClassifier(nn.Module):
+    def __init__(self, input_dim, output_dim, attn_dim, num_heads, num_layers, hidden_dim, dropout, size_of_batch, num_epochs, learning_rate):
+        super(SAINTClassifier, self).__init__()
         
         self.input_layer = nn.Linear(input_dim, hidden_dim)
         
@@ -92,8 +92,12 @@ class SAINT(nn.Module):
             IntersampleAttention(hidden_dim, attn_dim, num_heads, dropout=dropout)
             for _ in range(num_layers)
         ])
-        
+
         self.output_layer = nn.Linear(hidden_dim, output_dim)
+
+        self.size_of_batch = size_of_batch
+        self.num_epochs = num_epochs
+        self.learning_rate = learning_rate
         
     def forward(self, x):
         x = F.relu(self.input_layer(x))

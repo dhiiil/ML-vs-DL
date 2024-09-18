@@ -24,9 +24,9 @@ class TransformerBlock(nn.Module):
         out = self.dropout(self.norm2(forward + x))
         return out
 
-class TabularTransformer(nn.Module):
+class TabTrClassifier(nn.Module):
     def __init__(self, input_dim, output_dim, embed_size, num_heads, forward_expansion, dropout, batch_size, num_epochs, learning_rate):
-        super(TabularTransformer, self).__init__()
+        super(TabTrClassifier, self).__init__()
         self.embedding = nn.Linear(input_dim, embed_size)
         self.transformer_block = TransformerBlock(
             embed_size=embed_size,
