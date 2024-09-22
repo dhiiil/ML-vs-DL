@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import DataLoader, TensorDataset
+from sklearn.metrics import accuracy_score
 
 class DeepObliviousDecisionTreeLayer(nn.Module):
     def __init__(self, input_dim, num_trees, tree_depth, hidden_dim):
@@ -73,8 +74,24 @@ class NODEClassifier(nn.Module):
                 optimizer.step()
 
                 running_loss += loss.item()
+            
+            # Calculate and display accuracy every 10 epochs
+            if (epoch + 1) % 10 == 0 or (epoch + 1) == self.num_epochs:
+                total_correct = 0
+                total_samples = 0
 
-            print(f'Epoch [{epoch+1}/{self.num_epochs}], Loss: {running_loss/len(train_loader):.4f}')
+                # Evaluate on training set to compute accuracy
+                with torch.no_grad():  # Disable gradient calculation
+                    for inputs, labels in train_loader:
+                        outputs = self(inputs)
+                        _, predicted = torch.max(outputs, 1)
+                        total_correct += (predicted == labels).sum().item()
+                        total_samples += labels.size(0)
+
+                accuracy = total_correct / total_samples
+
+                # Print loss and accuracy
+                print(f'Epoch [{epoch+1}/{self.num_epochs}], Loss: {running_loss/len(train_loader):.4f}, Accuracy: {accuracy:.2f}')
 
         print("Training process has finished")
     

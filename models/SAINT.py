@@ -115,7 +115,7 @@ class SAINTClassifier(nn.Module):
     def fit(self, X_train, y_train):
         # Prepare dataset and dataloader
         dataset = TensorDataset(X_train, y_train)
-        train_loader = DataLoader(dataset, batch_size=self.batch_size, shuffle=True)
+        train_loader = DataLoader(dataset, batch_size=self.size_of_batch, shuffle=True)
         
         # Define loss function and optimizer
         criterion = nn.CrossEntropyLoss()
@@ -138,13 +138,29 @@ class SAINTClassifier(nn.Module):
 
                 running_loss += loss.item()
 
-            print(f'Epoch [{epoch+1}/{self.num_epochs}], Loss: {running_loss/len(train_loader):.4f}')
+            # Calculate and display accuracy every 10 epochs
+            if (epoch + 1) % 10 == 0 or (epoch + 1) == self.num_epochs:
+                total_correct = 0
+                total_samples = 0
+
+                # Evaluate on training set to compute accuracy
+                with torch.no_grad():  # Disable gradient calculation
+                    for inputs, labels in train_loader:
+                        outputs = self(inputs)
+                        _, predicted = torch.max(outputs, 1)
+                        total_correct += (predicted == labels).sum().item()
+                        total_samples += labels.size(0)
+
+                accuracy = total_correct / total_samples
+
+                # Print loss and accuracy
+                print(f'Epoch [{epoch+1}/{self.num_epochs}], Loss: {running_loss/len(train_loader):.4f}, Accuracy: {accuracy:.2f}')
 
         print("Training process has finished")
     
     def predict(self, X_test):
         # Prepare dataloader
-        test_loader = DataLoader(TensorDataset(X_test), batch_size=self.batch_size, shuffle=False)
+        test_loader = DataLoader(TensorDataset(X_test), batch_size=self.size_of_batch, shuffle=False)
         
         # Set the model to evaluation mode
         self.eval()
